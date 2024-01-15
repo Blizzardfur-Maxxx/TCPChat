@@ -36,6 +36,10 @@ def handle_incoming_packets(client_socket, address):
             # Receive data from the client
             data = client_socket.recv(1024)
 
+            if not data:
+                # No data received, indicating the client has closed the connection
+                break
+
             # Parse the received JSON data
             try:
                 packet = json.loads(data.decode("utf-8"))
@@ -74,28 +78,27 @@ def handle_incoming_packets(client_socket, address):
             else:
                 print("Packet missing 'type' field")
 
-        except Exception as e:
-            print(f"Error handling client: {e}")
+        except ConnectionResetError:
+            # Client forcibly closed the connection
+            print(f"Connection from {address} closed")
             break
 
     # Notify all clients about the updated number of users online
     number_of_clients = len(clients)
     broadcast_to_clients(f"Number of users online: {number_of_clients}")
 
-    # Remove the client from the list when disconnected
-    clients.remove(client_socket)
+    # Mark the client as inactive
     client_socket.close()
-    print(f"Connection from {address} closed")
 
 # Function to broadcast a message to all connected clients
 def broadcast_to_clients(message):
+    # Create a copy of the clients list to avoid modification during iteration
     for client in clients:
         try:
             # Modify this line to send the message in the desired format
             client.send(json.dumps({"type": "chat", "message": message}).encode("utf-8") + b'\n')
-        except Exception as e:
-            print(f"Error broadcasting to a client: {e}")
-            client.close()
+        except (ConnectionResetError, BrokenPipeError):
+            # Client forcibly closed the connection
             clients.remove(client)
 
 print("Welcome to TCPChat Server")
