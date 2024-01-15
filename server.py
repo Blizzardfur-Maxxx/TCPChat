@@ -1,8 +1,25 @@
 import socket
 import threading
 import json
+import string
 
 MAX_MESSAGE_LENGTH = 75
+
+# Function to check if the content is a valid text message with printable keyboard characters
+def is_valid_text_message(content):
+    if isinstance(content, bytes):
+        try:
+            # Try decoding the content as UTF-8
+            decoded_content = content.decode('utf-8')
+        except UnicodeDecodeError:
+            return False
+    elif isinstance(content, str):
+        decoded_content = content
+    else:
+        return False
+
+    # Check if the content contains only printable keyboard characters
+    return all(char in string.printable and char.isprintable() for char in decoded_content)
 
 # Function to handle a client connection
 def handle_incoming_packets(client_socket, address):
@@ -32,6 +49,17 @@ def handle_incoming_packets(client_socket, address):
                     # Handle chat messages
                     message = packet.get('message', '')
 
+                    if not is_valid_text_message(message):
+                        print("Invalid text message format: Dropping packet")
+                        continue
+
+                    # Check if the message is valid UTF-8
+                    try:
+                        message.encode('utf-8').decode('utf-8')
+                    except UnicodeDecodeError:
+                        print("Invalid UTF-8 message: Dropping packet")
+                        continue
+
                     # Check message length
                     if len(message) > MAX_MESSAGE_LENGTH:
                         print(f"Ignoring message: Message length exceeds maximum allowed length")
@@ -39,10 +67,6 @@ def handle_incoming_packets(client_socket, address):
 
                     broadcast_to_clients(message)
                     print(f"New message: {message}")
-
-                elif packet['type'] == 'file':
-                    # Ignore or reject file packets
-                    print("File packets are not allowed. Ignoring.")
 
                 else:
                     print("Unknown packet type")
