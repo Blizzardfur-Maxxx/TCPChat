@@ -32,11 +32,6 @@ def receive_messages(client_socket):
                             message = packet.get('message', '')
                             print(f"{message}")
 
-                        elif packet['type'] == 'file':
-                            # Ignore or handle file packets (client-specific logic)
-                            # print("Received a file. Ignoring.")
-                            pass
-
                         else:
                             # print("Unknown packet type")
                             pass
