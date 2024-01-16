@@ -93,13 +93,15 @@ def handle_incoming_packets(client_socket, address):
 # Function to broadcast a message to all connected clients
 def broadcast_to_clients(message):
     # Create a copy of the clients list to avoid modification during iteration
-    for client in clients:
-        try:
-            # Modify this line to send the message in the desired format
-            client.send(json.dumps({"type": "chat", "message": message}).encode("utf-8") + b'\n')
-        except (ConnectionResetError, BrokenPipeError):
-            # Client forcibly closed the connection
-            clients.remove(client)
+    clients_copy = clients.copy()
+    for client in clients_copy:
+        if isinstance(client, socket.socket) and client.fileno() != -1:
+            try:
+                # Modify this line to send the message in the desired format
+                client.send(json.dumps({"type": "chat", "message": message}).encode("utf-8") + b'\n')
+            except (ConnectionResetError, BrokenPipeError):
+                # Client forcibly closed the connection
+                clients.remove(client)
 
 print("Welcome to TCPChat Server")
 port = input("What port do you want the server to use?\n> ")
